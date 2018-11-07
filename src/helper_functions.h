@@ -244,9 +244,13 @@ inline double normalize_angle(double rad) {
   // First, check if the angle is already in the desired range [-PI, PI)
   if (!(rad >= -M_PI && rad < M_PI)) {
     // 1. Add PI to the given angle - the desired range is transitioned to [0, 2*PI)
-    // 2. Using fmod to ensure the angle is in the desired range without change the actual angle
-    // 3. Subtract PI to transition the result back to [-PI, PI) range
-    rad = fmod(rad + M_PI, 2.0 * M_PI) - M_PI;
+    // 2. Using fmod to ensure the angle is in the desired range without changing the actual angle
+    // 3. Since fmod can return negative value, ensure transformed angle to [0, 2*PI) by adding 2*PI when negative
+    // 4. Subtract PI to transition the result back to [-PI, PI) range
+    double rad_t = fmod(rad + M_PI, 2.0 * M_PI);
+    if (rad_t < 0)
+      rad_t += 2.0 * M_PI;
+    rad = rad_t - M_PI;
   }
   return rad;
 }
