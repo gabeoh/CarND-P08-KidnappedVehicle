@@ -16,6 +16,7 @@
 #include <iterator>
 
 #include "particle_filter.h"
+#include "helper_functions.h"
 
 using namespace std;
 
@@ -64,6 +65,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
     p.x += dist_x(generator);
     p.y += dist_y(generator);
     p.theta += dist_theta(generator);
+
+    // Normalize theta to [-PI, +PI)
+    p.theta = normalize_angle(p.theta);
   }
 }
 
