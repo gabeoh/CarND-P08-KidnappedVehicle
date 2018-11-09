@@ -259,10 +259,10 @@ inline double normalize_angle(double rad) {
  * Compute the probability of x for given multivariate normal (Gaussian) distribution
  * P(x1, x2, ...) = 1/(2*PI * s1*s2*...) * e^(-((x1 - m1)^2/(2*s1^2) + (x2 - m2)^2/(2*s2^2) + ...)))
  *
- * @param x
- * @param m mean of the distribution
- * @param std standard deviation of the distribution
- * @return the probabilty x for given multivariate normal distribution
+ * @param x variables
+ * @param m means of the distribution
+ * @param std standard deviations of the distribution
+ * @return the probabilty of x for given multivariate normal distribution
  */
 inline double multivariate_normal_distribute(const std::vector<double> &x, const std::vector<double> &m,
                                              const std::vector<double> &std) {

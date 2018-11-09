@@ -14,6 +14,8 @@
 #include <sstream>
 #include <string>
 #include <iterator>
+#include <cfloat>
+#include <cassert>
 
 #include "particle_filter.h"
 #include "helper_functions.h"
@@ -71,26 +73,51 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
   }
 }
 
-void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs> &observations) {
-  // TODO: Find the predicted measurement that is closest to each observed measurement and assign the
-  //   observed measurement to this particular landmark.
-  // NOTE: this method will NOT be called by the grading code. But you will probably find it useful to
-  //   implement this method and use it as a helper during the updateWeights phase.
-
+Map::single_landmark_s ParticleFilter::dataAssociation(LandmarkObs &ob_predicted, const Map &map_landmarks) {
+  // Find a map landmark that has the smallest distance with observation prediction
+  assert(map_landmarks.landmark_list.size() > 0);
+  double min_distance2 = DBL_MAX;
+  Map::single_landmark_s lm_assoc;
+  for (int i = 0; i < map_landmarks.landmark_list.size(); ++i) {
+    Map::single_landmark_s lm = map_landmarks.landmark_list.at(i);
+    double d_x = ob_predicted.x - lm.x_f;
+    double d_y = ob_predicted.y - lm.y_f;
+    double d2 =  d_x * d_x + d_y * d_y;
+    if (d2 < min_distance2) {
+      min_distance2 = d2;
+      lm_assoc = lm;
+    }
+  }
+  return lm_assoc;
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
                                    const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
-  // TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
-  //   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
-  // NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
-  //   according to the MAP'S coordinate system. You will need to transform between the two systems.
-  //   Keep in mind that this transformation requires both rotation AND translation (but no scaling).
-  //   The following is a good resource for the theory:
-  //   https://www.willamette.edu/~gorr/classes/GeneralGraphics/Transforms/transforms2d.htm
-  //   and the following is a good resource for the actual equation to implement (look at equation
-  //   3.33
-  //   http://planning.cs.uiuc.edu/node99.html
+
+  // Skip the update when either observations or landmarks are empty
+  if (observations.size() <= 0 || map_landmarks.landmark_list.size() <= 0)
+    return;
+
+  // Update the weights of each particle by associating observations with map landmarks
+  for (Particle &p: particles) {
+    double weight = 1.0;
+    for (LandmarkObs ob: observations) {
+      // Transform the observation in particle perspective to map coordinates
+      LandmarkObs ob_m;
+      ob_m.x = ob.x * cos(p.theta) - ob.y * sin(p.theta) + p.x;
+      ob_m.y = ob.x * sin(p.theta) + ob.y * cos(p.theta) + p.y;
+
+      // Find a landmark element that associates with the observation and compute its probability
+      Map::single_landmark_s lm_assoc = dataAssociation(ob_m, map_landmarks);
+      // NOTE: Since distance of the landmark and observation is important, the parameter order does not matter.
+      // The associated landmark as a variable and the predicted observation as a mean because we are evaluating
+      // the probability of the landmark association given the observation predictions.
+      double assoc_prob = multivariate_normal_distribute({lm_assoc.x_f, lm_assoc.y_f}, {ob_m.x, ob_m.y},
+                                                         {std_landmark[0], std_landmark[1]});
+      weight *= assoc_prob;
+    }
+    p.weight = weight;
+  }
 }
 
 void ParticleFilter::resample() {
