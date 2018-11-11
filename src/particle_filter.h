@@ -42,7 +42,7 @@ public:
   ParticleFilter() : num_particles(0), is_initialized(false) {}
 
   // Destructor
-  ~ParticleFilter() {}
+  ~ParticleFilter() = default;
 
   /**
    * init Initializes particle filter by initializing particles to Gaussian
@@ -99,7 +99,7 @@ public:
    * This can be a very useful debugging tool to make sure transformations are correct and assocations
    * correctly connected
    */
-  Particle SetAssociations(Particle &particle, const std::vector<int> &associations,
+  void SetAssociations(Particle &particle, const std::vector<int> &associations,
                            const std::vector<double> &sense_x, const std::vector<double> &sense_y);
 
   std::string getAssociations(Particle best);

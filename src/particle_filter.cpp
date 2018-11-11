@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <iostream>
 #include <numeric>
-#include <math.h>
+#include <cmath>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -24,8 +24,7 @@ using namespace std;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
   // Set the number of particles
-  // TODO: Find appropriate value
-  num_particles = 5;
+  num_particles = 10;
 
   // Normal distributions for x, y, and theta
   default_random_engine generator;
@@ -69,17 +68,17 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
     p.theta += dist_theta(generator);
 
     // Normalize theta to [-PI, +PI)
-    p.theta = normalize_angle(p.theta);
+    // The yaw angle is not normalized in this project
+    // p.theta = normalize_angle(p.theta);
   }
 }
 
 Map::single_landmark_s ParticleFilter::dataAssociation(LandmarkObs &ob_predicted, const Map &map_landmarks) {
   // Find a map landmark that has the smallest distance with observation prediction
-  assert(map_landmarks.landmark_list.size() > 0);
+  assert(!map_landmarks.landmark_list.empty());
   double min_distance2 = DBL_MAX;
-  Map::single_landmark_s lm_assoc;
-  for (int i = 0; i < map_landmarks.landmark_list.size(); ++i) {
-    Map::single_landmark_s lm = map_landmarks.landmark_list.at(i);
+  Map::single_landmark_s lm_assoc = {};
+  for (Map::single_landmark_s lm: map_landmarks.landmark_list) {
     double d_x = ob_predicted.x - lm.x_f;
     double d_y = ob_predicted.y - lm.y_f;
     double d2 =  d_x * d_x + d_y * d_y;
@@ -95,20 +94,27 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
                                    const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
 
   // Skip the update when either observations or landmarks are empty
-  if (observations.size() <= 0 || map_landmarks.landmark_list.size() <= 0)
+  if (observations.empty() || map_landmarks.landmark_list.empty())
     return;
 
   // Update the weights of each particle by associating observations with map landmarks
   for (Particle &p: particles) {
+    vector<int> associations;
+    vector<double> sense_x;
+    vector<double> sense_y;
     double weight = 1.0;
     for (LandmarkObs ob: observations) {
       // Transform the observation in particle perspective to map coordinates
-      LandmarkObs ob_m;
+      LandmarkObs ob_m = {};
       ob_m.x = ob.x * cos(p.theta) - ob.y * sin(p.theta) + p.x;
       ob_m.y = ob.x * sin(p.theta) + ob.y * cos(p.theta) + p.y;
 
       // Find a landmark element that associates with the observation and compute its probability
       Map::single_landmark_s lm_assoc = dataAssociation(ob_m, map_landmarks);
+      associations.push_back(lm_assoc.id_i);
+      sense_x.push_back(ob_m.x);
+      sense_y.push_back(ob_m.y);
+
       // NOTE: Since distance of the landmark and observation is important, the parameter order does not matter.
       // The associated landmark as a variable and the predicted observation as a mean because we are evaluating
       // the probability of the landmark association given the observation predictions.
@@ -117,17 +123,33 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       weight *= assoc_prob;
     }
     p.weight = weight;
+    SetAssociations(p, associations, sense_x, sense_y);
   }
 }
 
 void ParticleFilter::resample() {
-  // TODO: Resample particles with replacement with probability proportional to their weight.
-  // NOTE: You may find std::discrete_distribution helpful here.
-  //   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
+  // Build vector of particle weights
+  vector<double> weights;
+  for (Particle &p: particles) {
+    weights.push_back(p.weight);
+  }
 
+  // Discrete distribution based on particle weights
+  default_random_engine generator;
+  discrete_distribution<int> dist_particle(weights.begin(), weights.end());
+
+  // Resample particles using the discrete distribution
+  vector<Particle> new_particles;
+  for (int i = 0; i < num_particles; ++i) {
+    int particle_index = dist_particle(generator);
+    Particle new_p = particles[particle_index];
+    new_p.id = i;
+    new_particles.push_back(new_p);
+  }
+  particles = new_particles;
 }
 
-Particle ParticleFilter::SetAssociations(Particle &particle, const std::vector<int> &associations,
+void ParticleFilter::SetAssociations(Particle &particle, const std::vector<int> &associations,
                                          const std::vector<double> &sense_x, const std::vector<double> &sense_y) {
   //particle: the particle to assign each listed association, and association's (x,y) world coordinates mapping to
   // associations: The landmark id that goes along with each listed association
