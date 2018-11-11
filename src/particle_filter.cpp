@@ -73,12 +73,13 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
   }
 }
 
-Map::single_landmark_s ParticleFilter::dataAssociation(LandmarkObs &ob_predicted, const Map &map_landmarks) {
+Map::single_landmark_s ParticleFilter::dataAssociation(LandmarkObs &ob_predicted,
+                                                       const vector<Map::single_landmark_s> &landmark_list) {
   // Find a map landmark that has the smallest distance with observation prediction
-  assert(!map_landmarks.landmark_list.empty());
+  assert(!landmark_list.empty());
   double min_distance2 = DBL_MAX;
   Map::single_landmark_s lm_assoc = {};
-  for (Map::single_landmark_s lm: map_landmarks.landmark_list) {
+  for (Map::single_landmark_s lm: landmark_list) {
     double d_x = ob_predicted.x - lm.x_f;
     double d_y = ob_predicted.y - lm.y_f;
     double d2 =  d_x * d_x + d_y * d_y;
@@ -102,6 +103,21 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     vector<int> associations;
     vector<double> sense_x;
     vector<double> sense_y;
+
+    // First, filter landmarks on the map within sensor range
+    vector<Map::single_landmark_s> landmarks_in_range;
+    for (Map::single_landmark_s lm: map_landmarks.landmark_list) {
+      if (dist(lm.x_f, lm.y_f, p.x, p.y) <= sensor_range) {
+        landmarks_in_range.push_back(lm);
+      }
+    }
+    if (landmarks_in_range.empty()) {
+      // Set weight to minimum value when no landmarks in sensor range for the given particle
+      p.weight = DBL_MIN;
+      SetAssociations(p, associations, sense_x, sense_y);
+      continue;
+    }
+
     double weight = 1.0;
     for (LandmarkObs ob: observations) {
       // Transform the observation in particle perspective to map coordinates
@@ -110,7 +126,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       ob_m.y = ob.x * sin(p.theta) + ob.y * cos(p.theta) + p.y;
 
       // Find a landmark element that associates with the observation and compute its probability
-      Map::single_landmark_s lm_assoc = dataAssociation(ob_m, map_landmarks);
+      Map::single_landmark_s lm_assoc = dataAssociation(ob_m, landmarks_in_range);
       associations.push_back(lm_assoc.id_i);
       sense_x.push_back(ob_m.x);
       sense_y.push_back(ob_m.y);

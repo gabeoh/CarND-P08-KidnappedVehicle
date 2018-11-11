@@ -72,10 +72,10 @@ public:
    * a nearest-neighbors data association).
    *
    * @param ob_predicted Vector of predicted landmark observations
-   * @param map_landmarks Vector of landmark observations
+   * @param landmark_list Vector of landmarks on the map
    * @return the map landmark element that corresponds to the predicted observation
    */
-  Map::single_landmark_s dataAssociation(LandmarkObs &ob_predicted, const Map &map_landmarks);
+  Map::single_landmark_s dataAssociation(LandmarkObs &ob_predicted, const std::vector<Map::single_landmark_s> &landmark_list);
 
   /**
    * updateWeights Updates the weights for each particle based on the likelihood of the
