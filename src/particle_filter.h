@@ -4,7 +4,7 @@
  * 2D particle filter class.
  *
  * Created on: Nov 4th, 2018
- * Author: Gabriel Oh
+ * Author: Gabriel Jungmoo Oh
  */
 
 #ifndef PARTICLE_FILTER_H_

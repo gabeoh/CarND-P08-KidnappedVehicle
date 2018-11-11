@@ -3,7 +3,7 @@
  * Helper functions for the 2D particle filter.
  *
  * Created on: Nov 4th, 2018
- * Author: Gabriel Oh
+ * Author: Gabriel Jungmoo Oh
  */
 
 #ifndef HELPER_FUNCTIONS_H_

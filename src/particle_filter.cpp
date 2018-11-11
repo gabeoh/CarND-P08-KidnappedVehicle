@@ -2,7 +2,7 @@
  * particle_filter.cpp
  *
  * Created on: Nov 4th, 2018
- * Author: Gabriel Oh
+ * Author: Gabriel Jungmoo Oh
  */
 
 #include <random>
